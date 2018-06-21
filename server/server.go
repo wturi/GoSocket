@@ -1,54 +1,57 @@
-package main
-
-import (
-    "fmt"
-    "net"
-    "bufio"
-    "time"
-)
-
-func main() {
-    fmt.Println("Starting the server ...")
-    // 创建 listener
-    listener, err := net.Listen("tcp", "localhost:50000")
-    if err != nil {
-        fmt.Println("Error listening", err.Error())
-        return //终止程序
-    }
-    // 监听并接受来自客户端的连接
-    for {
-        conn, err := listener.Accept()
-        if err != nil {
-            fmt.Println("Error accepting", err.Error())
-            return // 终止程序
-        }
-        go doServerStuff(conn)
-    }
-}
-
-func doServerStuff(conn net.Conn) {
-    for {
-        buf := make([]byte, 512)
-        len, err := conn.Read(buf)
-        ipStr :=conn.RemoteAddr().String()
-        if err != nil {
-            fmt.Println("Error reading", err.Error())
-            return //终止程序
-        }
-        fmt.Printf(ipStr+": %v", string(buf[:len]))
-
-        reader:=bufio.NewReader(conn)
-
-        for {
-            message, err := reader.ReadString('\n')
-            if err != nil {
-                return
-            }
-    
-            fmt.Println(string(message))
-            msg := time.Now().String() + "\n"
-            b := []byte(msg)
-           conn.Write(b)
-        }
-    }
-}
+package main  
+import (  
+    "fmt"  
+    "net"  
+    "log"  
+    "os"  
+)  
+  
+  
+func main() {  
+  
+//建立socket，监听端口  
+    netListen, err := net.Listen("tcp", "localhost:9999")  
+    CheckError(err)  
+    defer netListen.Close()  
+  
+    Log("Waiting for clients")  
+    for {  
+        conn, err := netListen.Accept()  
+        if err != nil {  
+            continue  
+        }  
+  
+        Log(conn.RemoteAddr().String(), " tcp connect success")  
+        handleConnection(conn)  
+    }  
+}  
+//处理连接  
+func handleConnection(conn net.Conn) {  
+  
+    buffer := make([]byte, 2048)  
+  
+    for {  
+  
+        n, err := conn.Read(buffer)  
+  
+        if err != nil {  
+            Log(conn.RemoteAddr().String(), " connection error: ", err)  
+            return  
+        }  
+  
+  
+        Log(conn.RemoteAddr().String(), "receive data string:\n", string(buffer[:n]))  
+  
+    }  
+  
+}  
+func Log(v ...interface{}) {  
+    log.Println(v...)  
+}  
+  
+func CheckError(err error) {  
+    if err != nil {  
+        fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())  
+        os.Exit(1)  
+    }  
+}  
