@@ -4,34 +4,38 @@ import (
     "bufio"
     "fmt"
     "net"
-    "os"
-    "strings"
 )
 
 func main() {
-    //打开连接:
-    conn, err := net.Dial("tcp", "localhost:50000")
-    if err != nil {
-        //由于目标计算机积极拒绝而无法创建连接
-        fmt.Println("Error dialing", err.Error())
-        return // 终止程序
-    }
+    var tcpAddr *net.TCPAddr
+    //tcpAddr, _ = net.ResolveTCPAddr("tcp", "127.0.0.1:5000")
+	tcpAddr, _ = net.ResolveTCPAddr("tcp", "115.159.98.198:5000")
+    conn, _ := net.DialTCP("tcp", nil, tcpAddr)
+    defer conn.Close()
+    fmt.Println("connected!")
 
-    inputReader := bufio.NewReader(os.Stdin)
-    fmt.Println("First, what is your name?")
-    clientName, _ := inputReader.ReadString('\n')
-    // fmt.Printf("CLIENTNAME %s", clientName)
-    trimmedClient := strings.Trim(clientName, "\r\n") // Windows 平台下用 "\r\n"，Linux平台下使用 "\n"
-    // 给服务器发送信息直到程序退出：
+    go onMessageRecived(conn)
+
+    // 控制台聊天功能加入
     for {
-        fmt.Println("What to send to the server? Type Q to quit.")
-        input, _ := inputReader.ReadString('\n')
-        trimmedInput := strings.Trim(input, "\r\n")
-        // fmt.Printf("input:--%s--", input)
-        // fmt.Printf("trimmedInput:--%s--", trimmedInput)
-        if trimmedInput == "Q" {
-            return
+        var msg string
+        fmt.Scanln(&msg)
+        if msg == "quit" {
+            break
         }
-        _, err = conn.Write([]byte(trimmedClient + " says: " + trimmedInput+"\r\n"))
+        b := []byte(msg + "\n")
+        conn.Write(b)
+    }
+}
+
+func onMessageRecived(conn *net.TCPConn) {
+    reader := bufio.NewReader(conn)
+    for {
+        msg, err := reader.ReadString('\n')
+        fmt.Println(msg)
+        if err != nil {
+            //quitSemaphore <- true
+            break
+        }
     }
 }
